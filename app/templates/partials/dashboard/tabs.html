@@ -1,0 +1,14 @@
+<div class="mb-4 flex gap-2 text-sm font-medium">
+  <a
+    href="/dashboard"
+    class="rounded px-3 py-2 {% if active == 'month' %}bg-blue-600 text-white{% else %}bg-slate-100 hover:bg-slate-200{% endif %}"
+  >
+    {{ t("dashboard.tab.month") }}
+  </a>
+  <a
+    href="/dashboard/annual"
+    class="rounded px-3 py-2 {% if active == 'annual' %}bg-blue-600 text-white{% else %}bg-slate-100 hover:bg-slate-200{% endif %}"
+  >
+    {{ t("dashboard.tab.annual") }}
+  </a>
+</div>

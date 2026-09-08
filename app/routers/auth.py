@@ -1,0 +1,110 @@
+"""Login/logout, the post-login landing page, and the locale switcher.
+
+See docs/04-auth.md and docs/05-api-routes.md.
+"""
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import RedirectResponse, Response
+from sqlmodel import Session, select
+
+from app.core.deps import get_current_user
+from app.core.rate_limit import is_rate_limited, record_attempt
+from app.core.security import (
+    CSRF_COOKIE_NAME,
+    SESSION_COOKIE_NAME,
+    generate_csrf_token,
+    issue_csrf_cookie,
+    issue_session_cookie,
+    verify_csrf,
+    verify_password_constant_time,
+)
+from app.core.templates import render
+from app.db.models import User
+from app.db.session import get_session
+from app.i18n import SUPPORTED_LOCALES
+from app.i18n.middleware import LOCALE_COOKIE_NAME
+
+router = APIRouter()
+
+
+@router.get("/login")
+def login_page(request: Request) -> Response:
+    csrf_token = generate_csrf_token()
+    response = render(request, "login.html", {"csrf_token": csrf_token})
+    issue_csrf_cookie(response, csrf_token)
+    return response
+
+
+@router.post("/login")
+def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    csrf_token: str = Form(...),
+    session: Session = Depends(get_session),
+) -> Response:
+    client_ip = request.client.host if request.client else "unknown"
+    if is_rate_limited(client_ip):
+        raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
+    record_attempt(client_ip)
+
+    cookie_csrf = request.cookies.get(CSRF_COOKIE_NAME)
+    user = session.exec(select(User).where(User.username == username)).first()
+
+    # Always run a real argon2 verify (even for an unknown user) so response time doesn't
+    # leak whether the username exists.
+    password_ok = verify_password_constant_time(password, user.password_hash if user else None)
+    valid = (
+        verify_csrf(cookie_csrf, csrf_token) and user is not None and user.is_active and password_ok
+    )
+    if not valid:
+        new_csrf_token = generate_csrf_token()
+        response = render(
+            request, "login.html", {"csrf_token": new_csrf_token, "error": True}, status_code=401
+        )
+        issue_csrf_cookie(response, new_csrf_token)
+        return response
+
+    assert user is not None and user.id is not None
+    response = RedirectResponse(url="/", status_code=303)
+    issue_session_cookie(response, user.id)
+    response.delete_cookie(CSRF_COOKIE_NAME)
+    return response
+
+
+@router.post("/logout")
+def logout(
+    request: Request,
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    if not verify_csrf(request.cookies.get(CSRF_COOKIE_NAME), csrf_token):
+        raise HTTPException(status_code=403, detail="Invalid CSRF token")
+
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(SESSION_COOKIE_NAME)
+    return response
+
+
+@router.post("/locale")
+def switch_locale(
+    request: Request,
+    lang: str = Form(...),
+    next_url: str = Form("/", alias="next"),
+    csrf_token: str = Form(...),
+) -> Response:
+    # Only allow same-site relative paths — reject absolute/protocol-relative URLs
+    # (e.g. "https://evil.example" or "//evil.example") to prevent an open redirect.
+    safe_next = next_url if next_url.startswith("/") and not next_url.startswith("//") else "/"
+    valid = (
+        verify_csrf(request.cookies.get(CSRF_COOKIE_NAME), csrf_token) and lang in SUPPORTED_LOCALES
+    )
+    response = RedirectResponse(url=safe_next if valid else "/", status_code=303)
+    if valid:
+        response.set_cookie(LOCALE_COOKIE_NAME, lang, samesite="lax", max_age=60 * 60 * 24 * 365)
+    return response
+
+
+@router.get("/")
+def home(current_user: User = Depends(get_current_user)) -> Response:
+    return RedirectResponse(url="/dashboard", status_code=303)

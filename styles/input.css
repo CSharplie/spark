@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+/* Tailwind v4 auto-scans the project for class usage; the vendored htmx/echarts
+   bundles in app/static/vendor/ contain no Tailwind classes, so nothing to exclude. */

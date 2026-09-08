@@ -1,0 +1,15 @@
+{% if batch.status == "failed" %}
+<p class="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+  {{ t("import.result.failed", error=batch.error_message) }}
+</p>
+{% elif batch.status == "partial" %}
+<p class="mb-4 rounded bg-amber-50 px-3 py-2 text-sm text-amber-700">
+  {{ t("import.result.partial", inserted=batch.inserted_count, updated=batch.updated_count,
+  skipped=batch.skipped_count) }}
+</p>
+{% else %}
+<p class="mb-4 rounded bg-green-50 px-3 py-2 text-sm text-green-700">
+  {{ t("import.result.success", inserted=batch.inserted_count, updated=batch.updated_count) }}
+</p>
+{% endif %}
+{% include "partials/import_history.html" %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+{% with active = "annual" %}{% include "partials/dashboard/tabs.html" %}{% endwith %}
+<h1 class="mb-4 text-xl font-semibold">{{ year }}</h1>
+
+<div id="dashboard-filters" class="mb-4 flex flex-wrap items-end gap-3">
+  <label class="flex flex-col gap-1 text-sm font-medium">
+    {{ t("dashboard.filters.year") }}
+    <select name="year" class="min-h-[44px] rounded border border-slate-300 px-2 py-2 text-sm">
+      {% for y in available_years %}
+      <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</div>
+
+<div
+  id="kpis"
+  hx-get="/partials/dashboard/kpis"
+  hx-include="#dashboard-filters"
+  hx-trigger="load, change from:#dashboard-filters"
+  hx-push-url="true"
+  class="mb-6"
+></div>
+
+<div class="mb-6 rounded border border-slate-200 bg-white p-4">
+  <h2 class="mb-2 text-sm font-semibold text-slate-600">
+    {{ t("dashboard.chart.monthly_summary") }}
+  </h2>
+  <div
+    id="monthly-summary"
+    class="h-[32rem] w-full"
+    hx-get="/partials/dashboard/monthly-summary"
+    hx-include="#dashboard-filters"
+    hx-trigger="load, change from:#dashboard-filters"
+  ></div>
+</div>
+
+<div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+  <div class="rounded border border-slate-200 bg-white p-4">
+    <h2 class="mb-2 text-sm font-semibold text-slate-600">{{ t("dashboard.chart.cumulative") }}</h2>
+    <div
+      id="cumulative"
+      class="h-72 w-full"
+      hx-get="/partials/dashboard/cumulative"
+      hx-include="#dashboard-filters"
+      hx-trigger="load, change from:#dashboard-filters"
+    ></div>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-4">
+    <h2 class="mb-2 text-sm font-semibold text-slate-600">{{ t("dashboard.chart.season_split") }}</h2>
+    <div
+      id="season-split"
+      class="h-72 w-full"
+      hx-get="/partials/dashboard/season-split"
+      hx-include="#dashboard-filters"
+      hx-trigger="load, change from:#dashboard-filters"
+    ></div>
+  </div>
+</div>
+
+<div class="mb-6 rounded border border-slate-200 bg-white p-4">
+  <h2 class="mb-2 text-sm font-semibold text-slate-600">{{ t("dashboard.chart.calendar") }}</h2>
+  <div class="overflow-x-auto">
+    <div
+      id="calendar-heatmap"
+      class="h-56 w-full min-w-[700px]"
+      hx-get="/partials/dashboard/calendar-heatmap"
+      hx-include="#dashboard-filters"
+      hx-trigger="load, change from:#dashboard-filters"
+    ></div>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script src="{{ url_for('static', path='vendor/echarts.min.js') }}"></script>
+<script src="{{ url_for('static', path='js/charts.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+{% with active = "month" %}{% include "partials/dashboard/tabs.html" %}{% endwith %}
+<h1 class="mb-4 text-xl font-semibold capitalize">{{ month_label }}</h1>
+
+<div id="dashboard-filters" class="mb-4 flex flex-wrap items-end gap-3">
+  <label class="flex flex-col gap-1 text-sm font-medium">
+    {{ t("dashboard.filters.year") }}
+    <select name="year" class="min-h-[44px] rounded border border-slate-300 px-2 py-2 text-sm">
+      {% for y in available_years %}
+      <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="flex flex-col gap-1 text-sm font-medium">
+    {{ t("dashboard.filters.month") }}
+    <select name="month" class="min-h-[44px] rounded border border-slate-300 px-2 py-2 text-sm">
+      {% for m in range(1, 13) %}
+      <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</div>
+
+<div
+  id="kpis"
+  hx-get="/partials/dashboard/kpis"
+  hx-include="#dashboard-filters"
+  hx-trigger="load, change from:#dashboard-filters"
+  hx-push-url="true"
+  class="mb-6"
+></div>
+
+<div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+  <div id="monthly-summary-table"></div>
+  <div class="rounded border border-slate-200 bg-white p-4">
+    <h2 class="mb-2 text-sm font-semibold text-slate-600">{{ t("dashboard.chart.comparison") }}</h2>
+    <div
+      id="month-comparison"
+      class="h-72 w-full"
+      hx-get="/partials/dashboard/month-comparison"
+      hx-include="#dashboard-filters"
+      hx-trigger="load, change from:#dashboard-filters"
+    ></div>
+  </div>
+</div>
+
+<div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+  <div class="rounded border border-slate-200 bg-white p-4">
+    <h2 class="mb-2 text-sm font-semibold text-slate-600">{{ t("dashboard.chart.daily") }}</h2>
+    <div
+      id="daily-chart"
+      class="h-72 w-full"
+      hx-get="/partials/dashboard/daily-chart"
+      hx-include="#dashboard-filters"
+      hx-trigger="load, change from:#dashboard-filters"
+    ></div>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-4">
+    <h2 class="mb-2 text-sm font-semibold text-slate-600">{{ t("dashboard.chart.split") }}</h2>
+    <div
+      id="split-pie"
+      class="h-72 w-full"
+      hx-get="/partials/dashboard/split-pie"
+      hx-include="#dashboard-filters"
+      hx-trigger="load, change from:#dashboard-filters"
+    ></div>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script src="{{ url_for('static', path='vendor/echarts.min.js') }}"></script>
+<script src="{{ url_for('static', path='js/charts.js') }}"></script>
+{% endblock %}

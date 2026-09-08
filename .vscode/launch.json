@@ -1,0 +1,63 @@
+{
+  // See docs/07-project-structure.md for the app layout these configs assume.
+  // Requires the Python extension (ms-python.debugpy) and a uv-managed
+  // virtualenv at .venv (created by `uv sync`).
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI: spark (uvicorn --reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--reload", "--port", "8000"],
+      "jinja": true,
+      "justMyCode": true,
+      "subProcess": true,
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "python": "${workspaceFolder}/.venv/bin/python"
+    },
+    {
+      "name": "CLI: spark-cli create-user",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "app.cli.main",
+      "args": ["create-user", "--username", "${input:cliUsername}"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "python": "${workspaceFolder}/.venv/bin/python"
+    },
+    {
+      "name": "Pytest: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-v"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python"
+    },
+    {
+      "name": "Pytest: all tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-v"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "cliUsername",
+      "type": "promptString",
+      "description": "Username to pass to spark-cli create-user",
+      "default": "demo"
+    }
+  ]
+}

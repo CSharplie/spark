@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4 text-xl font-semibold">{{ t("import.title") }}</h1>
+<form
+  hx-post="/import"
+  hx-target="#import-panel"
+  hx-swap="innerHTML"
+  hx-encoding="multipart/form-data"
+  class="mb-6 flex flex-wrap items-end gap-3"
+>
+  <label class="flex flex-col gap-1 text-sm font-medium">
+    {{ t("import.choose_file") }}
+    <input
+      type="file"
+      name="file"
+      accept=".csv"
+      required
+      class="min-h-[44px] rounded border border-slate-300 px-3 py-2 text-sm"
+    />
+  </label>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+  <button
+    type="submit"
+    class="min-h-[44px] rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+  >
+    {{ t("import.submit") }}
+  </button>
+</form>
+<div id="import-panel">{% include "partials/import_history.html" %}</div>
+{% endblock %}

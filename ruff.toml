@@ -1,0 +1,15 @@
+target-version = "py313"
+line-length = 100
+exclude = ["alembic/versions"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+ignore = [
+    "B008", # FastAPI's `Depends(...)` in argument defaults is the idiomatic pattern
+]
+
+[lint.isort]
+known-first-party = ["app"]
+
+[format]
+quote-style = "double"

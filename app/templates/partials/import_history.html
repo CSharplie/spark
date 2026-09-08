@@ -1,0 +1,31 @@
+<h2 class="mb-2 text-lg font-semibold">{{ t("import.history.title") }}</h2>
+{% if batches %}
+<div class="overflow-x-auto">
+  <table class="w-full border-collapse text-sm">
+    <thead>
+      <tr class="border-b border-slate-200 text-left">
+        <th class="px-2 py-2">{{ t("import.history.filename") }}</th>
+        <th class="px-2 py-2">{{ t("import.history.date") }}</th>
+        <th class="px-2 py-2">{{ t("import.history.status") }}</th>
+        <th class="px-2 py-2">{{ t("import.history.inserted") }}</th>
+        <th class="px-2 py-2">{{ t("import.history.updated") }}</th>
+        <th class="px-2 py-2">{{ t("import.history.skipped") }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for batch in batches %}
+      <tr class="border-b border-slate-100">
+        <td class="px-2 py-2">{{ batch.source_filename }}</td>
+        <td class="px-2 py-2">{{ batch.imported_at.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td class="px-2 py-2">{{ t("import.status." ~ batch.status) }}</td>
+        <td class="px-2 py-2">{{ batch.inserted_count }}</td>
+        <td class="px-2 py-2">{{ batch.updated_count }}</td>
+        <td class="px-2 py-2">{{ batch.skipped_count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-sm text-slate-500">{{ t("import.history.empty") }}</p>
+{% endif %}
