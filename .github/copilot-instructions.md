@@ -1,7 +1,7 @@
 # Spark — Copilot Instructions
 
 Spark is a personal electricity-consumption tracker: FastAPI + SQLite
-backend, server-rendered HTMX/Alpine.js/ECharts frontend (no separate SPA
+backend, server-rendered HTMX/ECharts frontend (no separate SPA
 build). Full architecture lives in `/docs/` — read the relevant file
 before making related changes, don't duplicate it here:
 
@@ -12,7 +12,6 @@ before making related changes, don't duplicate it here:
 - [docs/05-api-routes.md](../docs/05-api-routes.md) — routes (pages, HTMX partials, CLI)
 - [docs/06-dashboard-views.md](../docs/06-dashboard-views.md) — dashboard/chart mapping
 - [docs/07-project-structure.md](../docs/07-project-structure.md) — repo layout, tooling
-- [docs/08-roadmap.md](../docs/08-roadmap.md) — phased implementation plan
 
 ## Language
 

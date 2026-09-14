@@ -1,0 +1,17 @@
+services:
+  app:
+    image: "${SPARK_IMAGE:-ghcr.io/csharplie/spark:latest}"
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      SPARK_ENV: production
+      SPARK_SECRET_KEY: "${SPARK_SECRET_KEY:?Set SPARK_SECRET_KEY in .env}"
+      SPARK_DATABASE_PATH: /app/data/spark.db
+      SPARK_JWT_EXPIRE_MINUTES: "${SPARK_JWT_EXPIRE_MINUTES:-10080}"
+      SPARK_CO2_FACTOR_G_PER_KWH: "${SPARK_CO2_FACTOR_G_PER_KWH:-52.0}"
+    volumes:
+      - spark-data:/app/data
+
+volumes:
+  spark-data:

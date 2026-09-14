@@ -5,7 +5,7 @@ applyTo: "app/**/*.py, tests/**/*.py"
 
 # Python Backend Guidelines
 
-- Target Python 3.12+, full type hints on public functions.
+- Target Python 3.13+, full type hints on public functions.
 - Use SQLModel sessions from `app/db/session.py`; never write raw SQL strings.
 - Every query touching `consumption_record` or `import_batch` must filter
   by the authenticated `user_id`.

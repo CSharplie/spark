@@ -26,14 +26,28 @@ def _check_password_length(password: str) -> None:
         raise typer.Exit(code=1)
 
 
+def _get_password(password: str | None) -> str:
+    if password is not None:
+        return password
+
+    try:
+        return typer.prompt("Password", hide_input=True, confirmation_prompt=True)
+    except UnicodeDecodeError:
+        typer.secho(
+            "Unable to decode terminal input as UTF-8. Retry and type the password manually.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=1) from None
+
+
 @app.command("create-user")
 def create_user(
     username: str = typer.Option(..., "--username", prompt=True),
-    password: str = typer.Option(
-        ..., "--password", prompt=True, confirmation_prompt=True, hide_input=True
-    ),
+    password: str | None = typer.Option(None, "--password"),
 ) -> None:
     """Create a new account. No public signup route exists — this is the only way in."""
+    password = _get_password(password)
     _check_password_length(password)
 
     with Session(db_session.engine) as session:
@@ -76,10 +90,9 @@ def deactivate_user(username: str = typer.Option(..., "--username")) -> None:
 @app.command("reset-password")
 def reset_password(
     username: str = typer.Option(..., "--username"),
-    password: str = typer.Option(
-        ..., "--password", prompt=True, confirmation_prompt=True, hide_input=True
-    ),
+    password: str | None = typer.Option(None, "--password"),
 ) -> None:
+    password = _get_password(password)
     _check_password_length(password)
 
     with Session(db_session.engine) as session:

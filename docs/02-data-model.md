@@ -87,10 +87,8 @@ All of the following are computed on demand by the aggregation service
   `CO2_FACTOR_G_PER_KWH` is a configurable setting (default: French grid
   average, adjustable via `.env`).
 - Year-to-date cumulative curve and a simple forecast: current year's
-  daily rate applied to the previous year's monthly shape (same method
-  shown in the reference PDF), recomputed on the fly — not stored.
+  daily rate applied to the previous year's monthly shape, recomputed on
+  the fly and not stored.
 
 Keeping these derived values out of the database avoids stale caches and
-keeps the schema minimal; if performance becomes an issue for large
-histories, a materialized `monthly_summary` table can be added later
-(see [08-roadmap.md](./08-roadmap.md)).
+keeps the schema minimal.

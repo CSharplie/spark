@@ -45,7 +45,7 @@ spark/
 │       ├── css/               # Tailwind output (built, not hand-edited)
 │       ├── js/
 │       │   └── charts.js      # ECharts init/update on htmx:afterSwap
-│       └── vendor/            # htmx.min.js, alpinejs.min.js, echarts.min.js (self-hosted)
+│       └── vendor/            # htmx.min.js and echarts.min.js (self-hosted)
 ├── tests/
 │   ├── conftest.py
 │   ├── test_auth.py

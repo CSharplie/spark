@@ -5,7 +5,7 @@
 ### Backend
 | Concern | Choice | Notes |
 |---|---|---|
-| Language / runtime | Python 3.12+ | |
+| Language / runtime | Python 3.13+ | |
 | Package manager | `uv` | lockfile-based, fast |
 | Lint / format | `ruff` | replaces flake8+black+isort |
 | Web framework | FastAPI | also serves server-rendered HTML (Jinja2) |
@@ -24,10 +24,9 @@
 | Concern | Choice | Notes |
 |---|---|---|
 | Interactivity | HTMX | partial page swaps for filters (month/year, view toggle) without a JS SPA |
-| Reactive UI bits | Alpine.js | dropdowns, mobile filter drawer, small client state |
 | Charts | Apache ECharts | only mainstream lib with a native **calendar heatmap** coordinate system (needed for the annual "kWh/day" view) |
 | CSS | Tailwind CSS, compiled with the **standalone Tailwind CLI** (no Node/npm required) | keeps the whole project Python-only tooling-wise |
-| Static assets | Vendored locally under `app/static/vendor/` (htmx.min.js, alpinejs.min.js, echarts.min.js) | no runtime dependency on third-party CDNs (security & offline use) |
+| Static assets | Vendored locally under `app/static/vendor/` (htmx.min.js, echarts.min.js) | no runtime dependency on third-party CDNs (security & offline use) |
 
 This is a single Python project: FastAPI serves both the JSON-ish HTMX
 fragments and the full HTML pages. There is no separate frontend
@@ -68,7 +67,7 @@ repo/build/deploy pipeline.
 flowchart LR
     Browser -- "GET /dashboard?year=2026&month=8" --> FastAPI
     FastAPI -- "render" --> Jinja2["Jinja2 templates"]
-    Jinja2 -- "HTML + Alpine + HTMX + ECharts option JSON" --> Browser
+    Jinja2 -- "HTML + HTMX + ECharts option JSON" --> Browser
     Browser -- "HTMX request on filter change" --> FastAPI
     FastAPI -- "query" --> AggService["Aggregation service (pandas)"]
     AggService -- "SELECT" --> SQLite[(SQLite)]
@@ -116,9 +115,10 @@ flowchart TB
 - **Dependencies**: kept minimal and locked via `uv.lock`; `ruff` catches
   obvious issues; no third-party CDN scripts loaded at runtime.
 
-## Deployment target (personal use)
+## Deployment
 
-Single process (`uvicorn`), SQLite file on local disk, run behind a reverse
-proxy (e.g. Caddy/Traefik) for TLS if exposed outside localhost. No
-container orchestration needed at this stage (kept simple, can be
-containerized later — see [08-roadmap.md](./08-roadmap.md)).
+The production image is published as `ghcr.io/csharplie/spark`. It runs one
+Uvicorn process as an unprivileged user and stores SQLite data in a mounted
+volume. Alembic migrations run before the application starts. A reverse proxy
+must terminate TLS when Spark is exposed outside localhost. See
+[09-docker.md](./09-docker.md) for container operations.

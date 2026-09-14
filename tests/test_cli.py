@@ -31,6 +31,19 @@ def test_create_user_rejects_short_password(engine) -> None:
     assert "at least" in result.output.lower()
 
 
+def test_create_user_reports_invalid_terminal_encoding(engine, monkeypatch) -> None:
+    def raise_decode_error(*_args, **_kwargs) -> str:
+        raise UnicodeDecodeError("utf-8", b"\xc2", 0, 1, "unexpected end of data")
+
+    monkeypatch.setattr("app.cli.main.typer.prompt", raise_decode_error)
+
+    result = runner.invoke(app, ["create-user", "--username", "bob"])
+
+    assert result.exit_code == 1
+    assert "decode terminal input as UTF-8" in result.output
+    assert "Traceback" not in result.output
+
+
 def test_create_user_rejects_duplicate_username(engine, test_user: User) -> None:
     result = runner.invoke(
         app,
