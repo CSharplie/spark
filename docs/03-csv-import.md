@@ -89,7 +89,8 @@ flowchart TD
     D --> E[Validate + normalize each row]
     E --> F[Upsert consumption_record by user_id+date]
     F --> G[Create import_batch summary row]
-    G --> H[Return summary: inserted/updated/skipped]
+    G --> T[Download missing daily temperatures if a city is set]
+    T --> H[Return summary: inserted/updated/skipped + temperatures]
 ```
 
 - The whole import runs in a **single DB transaction**: either the batch
@@ -99,6 +100,11 @@ flowchart TD
   counted in `skipped_count`, they don't fail the transaction.
 - Limits: max upload size (e.g. 5 MB — far more than needed for daily
   data over many years) and `.csv` extension enforced before parsing.
+- After a non-failed import, if the user has a city configured, daily
+  temperatures are downloaded for imported days that don't have one yet
+  (see [01-architecture.md](./01-architecture.md#weather-data)). This runs
+  after the import is committed: a weather-service failure only shows a
+  warning, it never rolls back the import.
 
 ## Export
 

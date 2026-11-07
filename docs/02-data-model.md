@@ -6,6 +6,7 @@
 erDiagram
     USER ||--o{ IMPORT_BATCH : uploads
     USER ||--o{ CONSUMPTION_RECORD : owns
+    USER ||--o{ DAILY_TEMPERATURE : owns
     IMPORT_BATCH ||--o{ CONSUMPTION_RECORD : produces
 
     USER {
@@ -14,6 +15,9 @@ erDiagram
         string password_hash
         bool is_active
         datetime created_at
+        string city "nullable"
+        float latitude "nullable"
+        float longitude "nullable"
     }
 
     IMPORT_BATCH {
@@ -40,6 +44,16 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
+
+    DAILY_TEMPERATURE {
+        int id PK
+        int user_id FK
+        date date
+        float temperature_min_c
+        float temperature_max_c
+        float temperature_avg_c
+        datetime fetched_at
+    }
 ```
 
 ## Tables
@@ -48,6 +62,9 @@ erDiagram
 - One row per human account. Created exclusively via the CLI (see
   [04-auth.md](./04-auth.md)).
 - `password_hash`: Argon2id hash, never the plaintext.
+- `city`, `latitude`, `longitude`: the user's location, set from the
+  Settings page (geocoded via Open-Meteo, `city` is the display name).
+  Null until configured.
 
 ### `import_batch`
 - One row per CSV upload, kept for audit/rollback and to show import
@@ -67,6 +84,18 @@ erDiagram
   always consistent (see edge cases doc). The discrepancy is only used for
   a data-quality warning at import time, never to silently override the
   authoritative total from the source.
+
+### `daily_temperature`
+- One row per **day** per user: outdoor min/max/average temperature (°C)
+  at the user's location, from the Open-Meteo historical archive
+  (`temperature_2m_min/max/mean`, days in the location's local timezone).
+- **Unique constraint**: `(user_id, date)`. Only days that have a
+  `consumption_record` are fetched, and only those not stored yet, so a
+  re-download is incremental.
+- The archive lags a few days behind real time; days it has no data for
+  yet are simply not stored and get picked up by a later download.
+- Changing the city to a different location deletes the user's stored
+  temperatures, then re-downloads them for the new location.
 
 ## Indexes
 

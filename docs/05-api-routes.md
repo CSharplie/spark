@@ -16,6 +16,7 @@ into the page by HTMX (requests carry the `HX-Request: true` header).
 | GET | `/dashboard/annual` | required | Annual dashboard page, query: `year` (default: current) |
 | GET | `/import` | required | CSV upload page + import history |
 | GET | `/export` | required | Download all of the user's consumption records as CSV (import-compatible format) |
+| GET | `/settings` | required | Settings page: city + daily temperature download |
 
 ## HTMX partials
 
@@ -29,8 +30,10 @@ into the page by HTMX (requests carry the `HX-Request: true` header).
 | GET | `/partials/dashboard/cumulative` | required | Year-to-date cumulative line + forecast |
 | GET | `/partials/dashboard/season-split` | required | Repartition by season bar |
 | GET | `/partials/dashboard/calendar-heatmap` | required | Annual kWh/day calendar heatmap |
-| POST | `/import` | required (+CSRF) | Upload a CSV file, run import, return summary partial |
+| POST | `/import` | required (+CSRF) | Upload a CSV file, run import, download missing daily temperatures (if a city is set), return summary partial |
 | GET | `/partials/import/history` | required | Import batch history table |
+| POST | `/settings/city` | required (+CSRF) | Geocode and save the city (`city` form field), then download temperatures; returns the settings panel partial |
+| POST | `/settings/temperatures/sync` | required (+CSRF) | Download missing daily temperatures; returns the settings panel partial |
 
 Each chart partial returns the HTML container plus the ECharts `option`
 JSON needed to (re)render it; a small shared JS snippet (in

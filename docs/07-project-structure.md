@@ -29,9 +29,11 @@ spark/
 │   ├── routers/
 │   │   ├── auth.py
 │   │   ├── dashboard.py
-│   │   └── imports.py
+│   │   ├── imports.py
+│   │   └── settings.py        # city setting + temperature download
 │   ├── services/
 │   │   ├── csv_import.py      # parsing + upsert logic
+│   │   ├── weather.py         # Open-Meteo geocoding + daily temperatures
 │   │   ├── aggregation.py     # pandas-based monthly/annual aggregations
 │   │   └── forecast.py        # year-end forecast calculation
 │   ├── templates/
@@ -50,6 +52,7 @@ spark/
 │   ├── conftest.py
 │   ├── test_auth.py
 │   ├── test_csv_import.py
+│   ├── test_weather.py
 │   └── test_aggregation.py
 ├── bin/
 │   └── tailwindcss            # standalone Tailwind CLI binary (gitignored, not committed)

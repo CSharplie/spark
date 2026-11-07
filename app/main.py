@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.core.exceptions import NotAuthenticated
 from app.i18n.middleware import LocaleMiddleware
 from app.routers import auth, dashboard, imports
+from app.routers import settings as settings_router
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 settings = get_settings()
@@ -31,6 +32,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(imports.router)
+app.include_router(settings_router.router)
 
 
 @app.middleware("http")

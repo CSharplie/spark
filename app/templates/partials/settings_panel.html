@@ -1,0 +1,14 @@
+{% if message_key %}
+<p
+  class="mb-4 rounded px-3 py-2 text-sm {% if message_level == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}"
+>
+  {{ t(message_key, **message_args) }}
+</p>
+{% endif %}
+<p class="mb-2 text-sm">
+  {% if current_user.city %}{{ t("settings.city.current", city=current_user.city) }}{% else %}{{
+  t("settings.city.none") }}{% endif %}
+</p>
+<p class="text-sm text-slate-500">
+  {{ t("settings.temperatures.coverage", days=temperature_days, total=consumption_days) }}
+</p>

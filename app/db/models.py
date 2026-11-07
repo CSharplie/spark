@@ -18,6 +18,9 @@ class User(SQLModel, table=True):
     password_hash: str
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=_utcnow)
+    city: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 class ImportBatch(SQLModel, table=True):
@@ -48,3 +51,16 @@ class ConsumptionRecord(SQLModel, table=True):
     total_kwh: float
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class DailyTemperature(SQLModel, table=True):
+    __tablename__ = "daily_temperature"
+    __table_args__ = (UniqueConstraint("user_id", "date", name="uq_temperature_user_date"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    date: date_
+    temperature_min_c: float
+    temperature_max_c: float
+    temperature_avg_c: float
+    fetched_at: datetime = Field(default_factory=_utcnow)
