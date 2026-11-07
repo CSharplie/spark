@@ -6,8 +6,6 @@
   "login.password": "Mot de passe",
   "login.submit": "Se connecter",
   "login.error": "Nom d'utilisateur ou mot de passe invalide.",
-  "locale.switch.en": "English",
-  "locale.switch.fr": "Français",
   "nav.dashboard": "Tableau de bord",
   "nav.import": "Import",
   "import.title": "Importer des données de consommation",

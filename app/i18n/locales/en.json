@@ -6,8 +6,6 @@
   "login.password": "Password",
   "login.submit": "Sign in",
   "login.error": "Invalid username or password.",
-  "locale.switch.en": "English",
-  "locale.switch.fr": "Français",
   "nav.dashboard": "Dashboard",
   "nav.import": "Import",
   "import.title": "Import consumption data",

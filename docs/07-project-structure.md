@@ -25,7 +25,7 @@ spark/
 │   │   ├── locales/
 │   │   │   ├── en.json        # reference/default locale
 │   │   │   └── fr.json
-│   │   └── middleware.py      # Accept-Language negotiation + locale cookie override
+│   │   └── middleware.py      # Accept-Language negotiation
 │   ├── routers/
 │   │   ├── auth.py
 │   │   ├── dashboard.py

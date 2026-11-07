@@ -40,13 +40,11 @@ repo/build/deploy pipeline.
   developer-facing, not part of the translated surface.
 - **Supported locales**: English (`en`, reference/default) and French
   (`fr`).
-- **Detection**: on first request, the best match is negotiated from the
-  `Accept-Language` header against the supported locales (Babel's
-  `negotiate_locale`), then persisted in a `locale` cookie so it isn't
-  renegotiated on every request.
-- **Override**: a small language switcher sets the `locale` cookie
-  explicitly (`POST /locale`, see [05-api-routes.md](./05-api-routes.md)),
-  which then takes precedence over header negotiation.
+- **Detection**: on every request, the best match is negotiated from the
+  browser's `Accept-Language` header against the supported locales
+  (Babel's `negotiate_locale`), falling back to English. There is no
+  in-app language switcher — users change language via their browser
+  settings.
 - **String catalogs**: flat key→string JSON maps in
   `app/i18n/locales/en.json` / `fr.json`, loaded once at startup. A
   Jinja2 global `t(key, **kwargs)` looks up the string for the active

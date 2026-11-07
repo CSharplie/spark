@@ -10,7 +10,7 @@ from markupsafe import Markup
 from starlette.requests import Request
 from starlette.templating import _TemplateResponse
 
-from app.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, get_translator
+from app.i18n import DEFAULT_LOCALE, get_translator
 
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent.parent / "templates")
 
@@ -42,7 +42,6 @@ def render(
     merged = {
         "t": get_translator(locale),
         "locale": locale,
-        "supported_locales": SUPPORTED_LOCALES,
         **(context or {}),
     }
     return templates.TemplateResponse(request, name, merged, status_code=status_code)
