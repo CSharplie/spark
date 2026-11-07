@@ -10,8 +10,10 @@ from datetime import date, timedelta
 import pytest
 from sqlmodel import Session
 
-from app.db.models import ConsumptionRecord
+from app.db.models import ConsumptionRecord, DailyTemperature
+from app.i18n import get_translator
 from app.services.aggregation import get_annual_summary, get_month_summary
+from app.services.chart_options import daily_chart_option, monthly_summary_option
 from app.services.forecast import compute_forecast
 
 TODAY = date(2026, 3, 15)
@@ -165,3 +167,76 @@ def test_forecast_with_no_previous_year_data_falls_back_to_ratio_one(
     assert result.rate_ratio == 1.0
     assert result.monthly_forecast == {}
     assert result.estimated_annual_total_kwh == 0.0
+
+
+def _add_temperatures(session: Session, user_id: int, values: dict[date, float]) -> None:
+    for day, avg in values.items():
+        session.add(
+            DailyTemperature(
+                user_id=user_id,
+                date=day,
+                temperature_min_c=avg - 4,
+                temperature_max_c=avg + 4,
+                temperature_avg_c=avg,
+            )
+        )
+    session.commit()
+
+
+def test_month_summary_attaches_daily_temperatures(session: Session, flat_dataset) -> None:
+    user = flat_dataset
+    _add_temperatures(session, user.id, {date(2026, 3, 1): 5.0, date(2026, 4, 1): 20.0})
+
+    summary = get_month_summary(session, user.id, year=2026, month=3)
+
+    first, second = summary.daily_points[0], summary.daily_points[1]
+    assert (first.temperature_min_c, first.temperature_max_c, first.temperature_avg_c) == (
+        1.0,
+        9.0,
+        5.0,
+    )
+    assert second.temperature_avg_c is None
+
+
+def test_annual_summary_averages_temperatures_per_month_for_n_and_n_minus_1(
+    session: Session, flat_dataset
+) -> None:
+    user = flat_dataset
+    _add_temperatures(
+        session,
+        user.id,
+        {date(2026, 1, 1): 2.0, date(2026, 1, 2): 6.0, date(2025, 1, 5): -3.0},
+    )
+
+    summary = get_annual_summary(session, user.id, year=2026)
+
+    assert summary.months_current[0].temperature_avg_c == pytest.approx(4.0)
+    assert summary.months_previous[0].temperature_avg_c == pytest.approx(-3.0)
+    assert summary.months_current[1].temperature_avg_c is None
+
+
+def test_charts_include_temperature_series_only_when_available(
+    session: Session, flat_dataset
+) -> None:
+    user = flat_dataset
+    t = get_translator("en")
+    month = get_month_summary(session, user.id, year=2026, month=3)
+    annual = get_annual_summary(session, user.id, year=2026)
+    forecast = compute_forecast(session, user.id, year=2026, today=TODAY)
+    assert len(daily_chart_option(month, t)["yAxis"]) == 1
+    assert len(monthly_summary_option(annual, forecast, t, "en")["yAxis"]) == 2
+
+    _add_temperatures(session, user.id, {date(2026, 3, 1): 5.0, date(2025, 3, 1): 7.0})
+    month = get_month_summary(session, user.id, year=2026, month=3)
+    annual = get_annual_summary(session, user.id, year=2026)
+
+    daily = daily_chart_option(month, t)
+    daily_names = {s["name"] for s in daily["series"]}
+    assert {"Min °C", "Max °C", "Avg °C"} <= daily_names
+    assert daily["yAxis"][1]["axisLabel"]["formatter"] == "{value} °C"
+
+    monthly = monthly_summary_option(annual, forecast, t, "en")
+    by_name = {s["name"]: s for s in monthly["series"]}
+    assert by_name["°C N"]["data"][2] == 5.0
+    assert by_name["°C N-1"]["data"][2] == 7.0
+    assert by_name["°C N"]["yAxisIndex"] == 2

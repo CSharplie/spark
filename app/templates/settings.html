@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4 text-xl font-semibold">{{ t("settings.title") }}</h1>
+
+<h2 class="mb-2 text-lg font-semibold">{{ t("settings.city.title") }}</h2>
+<p class="mb-4 text-sm text-slate-500">{{ t("settings.city.help") }}</p>
+<form
+  hx-post="/settings/city"
+  hx-target="#settings-panel"
+  hx-swap="innerHTML"
+  class="mb-6 flex flex-wrap items-end gap-3"
+>
+  <label class="flex flex-col gap-1 text-sm font-medium">
+    {{ t("settings.city.label") }}
+    <input
+      type="text"
+      name="city"
+      value="{{ current_user.city or '' }}"
+      maxlength="100"
+      required
+      class="min-h-[44px] rounded border border-slate-300 px-3 py-2 text-sm"
+    />
+  </label>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+  <button
+    type="submit"
+    class="min-h-[44px] rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+  >
+    {{ t("settings.city.submit") }}
+  </button>
+</form>
+
+<h2 class="mb-2 text-lg font-semibold">{{ t("settings.temperatures.title") }}</h2>
+<form
+  hx-post="/settings/temperatures/sync"
+  hx-target="#settings-panel"
+  hx-swap="innerHTML"
+  class="mb-6 flex"
+>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+  <button
+    type="submit"
+    class="min-h-[44px] rounded border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+  >
+    {{ t("settings.temperatures.sync") }}
+  </button>
+</form>
+
+<div id="settings-panel">{% include "partials/settings_panel.html" %}</div>
+{% endblock %}

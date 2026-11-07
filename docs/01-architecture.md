@@ -18,6 +18,7 @@
 | Auth token | `PyJWT`, stored in an httpOnly cookie | see [04-auth.md](./04-auth.md) |
 | CSV parsing / aggregation | `pandas` | date resampling (day/month/year), stats |
 | Localization | `Babel` | locale-aware date/number/month-name formatting (see i18n section below) |
+| HTTP client | `httpx` | outbound calls to the weather API (see below) |
 | Tests | `pytest` + `httpx.AsyncClient` | |
 
 ### Frontend (server-rendered, no separate SPA build)
@@ -59,6 +60,25 @@ repo/build/deploy pipeline.
   already translated for the active locale, using the same `t()` catalog
   and Babel formatting.
 
+## Weather data
+
+- Daily outdoor temperatures (min/max/average, °C) come from
+  [Open-Meteo](https://open-meteo.com/): free, no API key. The geocoding
+  API turns the user's city into coordinates; the historical archive API
+  returns daily `temperature_2m_min/max/mean`.
+- Calls are made **server-side** with `httpx` (15 s timeout) to fixed
+  hosts only — the browser never talks to Open-Meteo, so the CSP is
+  unchanged. Only the city name and coordinates leave the server.
+- Downloads run automatically after each CSV upload (for the newly
+  imported days, if a city is configured), when the city is saved, and
+  from the "Download temperatures" button on `/settings` (to retry days
+  that weren't available yet) — never on page load.
+  Long periods are split into requests of at most 366 days, each
+  committed on success, so a network failure keeps what was fetched.
+- If Open-Meteo is unreachable, the UI shows a warning and nothing else
+  breaks: the CSV import itself is already committed and never fails
+  because of the weather service.
+
 ## High-level request flow
 
 ```mermaid
@@ -77,8 +97,8 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph app
-        routers["routers/ (auth, dashboard, imports)"]
-        services["services/ (csv_import, aggregation, forecast)"]
+        routers["routers/ (auth, dashboard, imports, settings)"]
+        services["services/ (csv_import, csv_export, aggregation, forecast, weather)"]
         db["db/ (models, session)"]
         core["core/ (config, security)"]
         cli["cli/ (typer app)"]

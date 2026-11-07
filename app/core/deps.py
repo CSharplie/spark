@@ -1,5 +1,8 @@
 """Shared FastAPI dependencies."""
 
+from collections.abc import Iterator
+
+import httpx
 from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
@@ -20,3 +23,8 @@ def get_current_user(request: Request, session: Session = Depends(get_session)) 
     if user is None or not user.is_active:
         raise NotAuthenticated()
     return user
+
+
+def get_http_client() -> Iterator[httpx.Client]:
+    with httpx.Client(timeout=15.0) as client:
+        yield client
