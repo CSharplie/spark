@@ -16,6 +16,7 @@ into the page by HTMX (requests carry the `HX-Request: true` header).
 | GET | `/dashboard` | required | Monthly dashboard page, query: `year`, `month` (defaults: current) |
 | GET | `/dashboard/annual` | required | Annual dashboard page, query: `year` (default: current) |
 | GET | `/import` | required | CSV upload page + import history |
+| GET | `/export` | required | Download all of the user's consumption records as CSV (import-compatible format) |
 
 ## HTMX partials
 

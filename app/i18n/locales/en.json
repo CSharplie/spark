@@ -13,6 +13,7 @@
   "import.title": "Import consumption data",
   "import.choose_file": "CSV file",
   "import.submit": "Upload",
+  "import.export": "Export all data (CSV)",
   "import.result.success": "Import successful: {inserted} added, {updated} updated.",
   "import.result.partial": "Import completed with warnings: {inserted} added, {updated} updated, {skipped} skipped.",
   "import.result.failed": "Import failed: {error}",
