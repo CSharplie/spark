@@ -1,4 +1,4 @@
-"""Login/logout, the post-login landing page, and the locale switcher.
+"""Login/logout and the post-login landing page.
 
 See docs/04-auth.md and docs/05-api-routes.md.
 """
@@ -21,8 +21,6 @@ from app.core.security import (
 from app.core.templates import render
 from app.db.models import User
 from app.db.session import get_session
-from app.i18n import SUPPORTED_LOCALES
-from app.i18n.middleware import LOCALE_COOKIE_NAME
 
 router = APIRouter()
 
@@ -83,25 +81,6 @@ def logout(
 
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie(SESSION_COOKIE_NAME)
-    return response
-
-
-@router.post("/locale")
-def switch_locale(
-    request: Request,
-    lang: str = Form(...),
-    next_url: str = Form("/", alias="next"),
-    csrf_token: str = Form(...),
-) -> Response:
-    # Only allow same-site relative paths — reject absolute/protocol-relative URLs
-    # (e.g. "https://evil.example" or "//evil.example") to prevent an open redirect.
-    safe_next = next_url if next_url.startswith("/") and not next_url.startswith("//") else "/"
-    valid = (
-        verify_csrf(request.cookies.get(CSRF_COOKIE_NAME), csrf_token) and lang in SUPPORTED_LOCALES
-    )
-    response = RedirectResponse(url=safe_next if valid else "/", status_code=303)
-    if valid:
-        response.set_cookie(LOCALE_COOKIE_NAME, lang, samesite="lax", max_age=60 * 60 * 24 * 365)
     return response
 
 

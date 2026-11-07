@@ -26,5 +26,14 @@
     {{ t("import.submit") }}
   </button>
 </form>
+<div class="mb-6 flex">
+  <a
+    href="/export"
+    download
+    class="flex min-h-[44px] items-center rounded border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+  >
+    {{ t("import.export") }}
+  </a>
+</div>
 <div id="import-panel">{% include "partials/import_history.html" %}</div>
 {% endblock %}

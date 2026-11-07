@@ -100,6 +100,13 @@ flowchart TD
 - Limits: max upload size (e.g. 5 MB — far more than needed for daily
   data over many years) and `.csv` extension enforced before parsing.
 
+## Export
+
+`GET /export` downloads all of the authenticated user's records, sorted
+by date, in the **same format as the source file** (UTF-8 with BOM,
+comma-delimited, French header, `dd/mm/yyyy`, `"<number> kWh"` cells,
+`Énergie` always `Électricité`), so an export can be re-imported as-is.
+
 ## Out of scope for v1
 
 - Other energy types (gas, water) — column is read but rows with

@@ -19,21 +19,6 @@
         <a href="/import" class="rounded px-2 py-2 hover:bg-slate-100">{{ t("nav.import") }}</a>
       </nav>
       {% endif %}
-      <nav class="flex gap-1">
-        {% for code in supported_locales %}
-        <form method="post" action="/locale">
-          <input type="hidden" name="lang" value="{{ code }}" />
-          <input type="hidden" name="next" value="{{ request.url.path }}" />
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-          <button
-            type="submit"
-            class="min-h-[44px] rounded px-2 py-2 text-sm hover:bg-slate-100 {% if code == locale %}font-semibold underline{% endif %}"
-          >
-            {{ t("locale.switch." ~ code) }}
-          </button>
-        </form>
-        {% endfor %}
-      </nav>
       {% if current_user %}
       <form method="post" action="/logout">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />

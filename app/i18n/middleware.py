@@ -1,4 +1,4 @@
-"""Locale negotiation: cookie override, else Accept-Language, else default."""
+"""Locale negotiation from the browser's Accept-Language header, else default."""
 
 from collections.abc import Awaitable, Callable
 
@@ -9,14 +9,8 @@ from starlette.responses import Response
 
 from app.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES
 
-LOCALE_COOKIE_NAME = "locale"
-
 
 def resolve_locale(request: Request) -> str:
-    cookie_locale = request.cookies.get(LOCALE_COOKIE_NAME)
-    if cookie_locale in SUPPORTED_LOCALES:
-        return cookie_locale
-
     accept_language = request.headers.get("accept-language", "")
     preferred = [
         lang.split(";")[0].strip().replace("-", "_") for lang in accept_language.split(",") if lang

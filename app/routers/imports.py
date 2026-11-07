@@ -1,7 +1,9 @@
-"""CSV upload page, upload handler, and import history.
+"""CSV upload page, upload handler, import history, and CSV export.
 
 See docs/03-csv-import.md and docs/05-api-routes.md.
 """
+
+from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
@@ -17,6 +19,7 @@ from app.core.security import (
 from app.core.templates import render
 from app.db.models import ImportBatch, User
 from app.db.session import get_session
+from app.services.csv_export import export_csv
 from app.services.csv_import import import_csv
 
 router = APIRouter()
@@ -81,6 +84,20 @@ async def upload_csv(
         request,
         "partials/import_result.html",
         {"batch": batch, "batches": _history(session, current_user.id)},
+    )
+
+
+@router.get("/export")
+def export_data(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    assert current_user.id is not None
+    filename = f"spark-export-{date.today().isoformat()}.csv"
+    return Response(
+        content=export_csv(session, current_user.id),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

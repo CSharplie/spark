@@ -7,8 +7,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlmodel import Session, SQLModel, create_engine
 
 import app.db.session as db_session
+from app.core import rate_limit
 from app.core.security import hash_password
 from app.db.models import User
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_rate_limit() -> None:
+    rate_limit._attempts.clear()
 
 
 @pytest.fixture
