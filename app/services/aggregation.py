@@ -4,6 +4,7 @@ detection, and CO2 estimate — computed on the fly, nothing persisted.
 See docs/02-data-model.md#derived-data and docs/06-dashboard-views.md.
 """
 
+from calendar import monthrange
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -11,7 +12,7 @@ import pandas as pd
 from sqlmodel import Session, select
 
 from app.core.config import get_settings
-from app.db.models import ConsumptionRecord
+from app.db.models import ConsumptionRecord, DailyTemperature
 
 ROLLING_WINDOW_DAYS = 30
 MIN_ROLLING_PERIODS = 5
@@ -32,6 +33,9 @@ class DailyPoint:
     off_peak_hours_kwh: float
     total_kwh: float
     is_unusual: bool
+    temperature_min_c: float | None = None
+    temperature_max_c: float | None = None
+    temperature_avg_c: float | None = None
 
 
 @dataclass
@@ -65,6 +69,7 @@ class MonthlyTotal:
     total_kwh: float
     peak_hours_kwh: float
     off_peak_hours_kwh: float
+    temperature_avg_c: float | None = None  # mean of the month's daily averages
 
 
 @dataclass
@@ -107,6 +112,32 @@ def load_dataframe(session: Session, user_id: int) -> pd.DataFrame:
     return df.set_index("date").sort_index()
 
 
+def load_temperatures(
+    session: Session, user_id: int, start: date, end: date
+) -> dict[date, DailyTemperature]:
+    """`user_id`'s stored daily temperatures between `start` and `end` (inclusive), by date."""
+    rows = session.exec(
+        select(DailyTemperature).where(
+            DailyTemperature.user_id == user_id,
+            DailyTemperature.date >= start,
+            DailyTemperature.date <= end,
+        )
+    )
+    return {row.date: row for row in rows}
+
+
+def _apply_monthly_temperatures(
+    months: list[MonthlyTotal], temperatures: dict[date, DailyTemperature], year: int
+) -> None:
+    for m in months:
+        values = [
+            t.temperature_avg_c
+            for day, t in temperatures.items()
+            if day.year == year and day.month == m.month
+        ]
+        m.temperature_avg_c = sum(values) / len(values) if values else None
+
+
 def _is_unusual(value: float, trailing_avg: float | None) -> bool:
     if trailing_avg is None or pd.isna(trailing_avg):
         return False
@@ -143,17 +174,25 @@ def get_month_summary(session: Session, user_id: int, year: int, month: int) -> 
     )
 
     month_df = df[(df.index.year == year) & (df.index.month == month)] if not df.empty else df
+    month_start_day = date(year, month, 1)
+    month_end_day = date(year, month, monthrange(year, month)[1])
+    temperatures = load_temperatures(session, user_id, month_start_day, month_end_day)
 
-    daily_points = [
-        DailyPoint(
-            date=idx.date(),
-            peak_hours_kwh=row["peak_hours_kwh"],
-            off_peak_hours_kwh=row["off_peak_hours_kwh"],
-            total_kwh=row["total_kwh"],
-            is_unusual=_is_unusual(row["total_kwh"], trailing_avg.get(idx)),
+    daily_points: list[DailyPoint] = []
+    for idx, row in month_df.iterrows():
+        temperature = temperatures.get(idx.date())
+        daily_points.append(
+            DailyPoint(
+                date=idx.date(),
+                peak_hours_kwh=row["peak_hours_kwh"],
+                off_peak_hours_kwh=row["off_peak_hours_kwh"],
+                total_kwh=row["total_kwh"],
+                is_unusual=_is_unusual(row["total_kwh"], trailing_avg.get(idx)),
+                temperature_min_c=temperature.temperature_min_c if temperature else None,
+                temperature_max_c=temperature.temperature_max_c if temperature else None,
+                temperature_avg_c=temperature.temperature_avg_c if temperature else None,
+            )
         )
-        for idx, row in month_df.iterrows()
-    ]
     unusual_day_count = sum(point.is_unusual for point in daily_points)
 
     total_kwh = month_df["total_kwh"].sum()
@@ -214,6 +253,9 @@ def get_annual_summary(session: Session, user_id: int, year: int) -> AnnualSumma
     df = load_dataframe(session, user_id)
     months_current = monthly_totals(df, year)
     months_previous = monthly_totals(df, year - 1)
+    temperatures = load_temperatures(session, user_id, date(year - 1, 1, 1), date(year, 12, 31))
+    _apply_monthly_temperatures(months_current, temperatures, year)
+    _apply_monthly_temperatures(months_previous, temperatures, year - 1)
 
     months_with_data = [m for m in months_current if m.total_kwh > 0]
     total_to_date = sum(m.total_kwh for m in months_with_data)

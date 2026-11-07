@@ -18,6 +18,9 @@ OFF_PEAK_COLOR = "#f59e0b"  # amber-500
 UNUSUAL_COLOR = "#dc2626"  # red-600
 PREVIOUS_YEAR_COLOR = "#94a3b8"  # slate-400
 CURRENT_YEAR_COLOR = "#2563eb"  # blue-600
+TEMPERATURE_AVG_COLOR = "#0f766e"  # teal-700
+TEMPERATURE_RANGE_COLOR = "#5eead4"  # teal-300
+PREVIOUS_YEAR_TEMPERATURE_COLOR = "#5eead4"  # teal-300
 
 SEASON_ORDER = ("winter", "spring", "summer", "autumn")
 
@@ -26,22 +29,91 @@ def _month_labels(locale: str) -> list[str]:
     return [format_date(date_(2000, m, 1), format="MMM", locale=locale) for m in range(1, 13)]
 
 
+def _round(value: float | None) -> float | None:
+    return None if value is None else round(value, 1)
+
+
+def _kwh_axis(**extra: Any) -> dict[str, Any]:
+    # Unit in the tick labels rather than an axis name, which collides with the legend.
+    return {"type": "value", "axisLabel": {"formatter": "{value} kWh"}, **extra}
+
+
+def _temperature_axis(**extra: Any) -> dict[str, Any]:
+    # `scale` lets the axis follow the data (incl. negatives) instead of starting at 0.
+    return {
+        "type": "value",
+        "scale": True,
+        "splitLine": {"show": False},
+        "axisLabel": {"formatter": "{value} °C"},
+        **extra,
+    }
+
+
+def _temperature_line(
+    name: str, data: list[float | None], color: str, width: float = 2, **line_style: Any
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "type": "line",
+        "data": data,
+        "smooth": True,
+        "showSymbol": False,
+        "z": 3,
+        "itemStyle": {"color": color},
+        "lineStyle": {"color": color, "width": width, **line_style},
+    }
+
+
 def daily_chart_option(summary: MonthSummary, t: Callable[..., str]) -> dict[str, Any]:
-    dates = [p.date.isoformat() for p in summary.daily_points]
-    peak = [round(p.peak_hours_kwh, 3) for p in summary.daily_points]
-    off_peak = [round(p.off_peak_hours_kwh, 3) for p in summary.daily_points]
+    points = summary.daily_points
+    dates = [p.date.isoformat() for p in points]
+    peak = [round(p.peak_hours_kwh, 3) for p in points]
+    off_peak = [round(p.off_peak_hours_kwh, 3) for p in points]
     unusual = [
-        {"value": [p.date.isoformat(), round(p.total_kwh, 3)]}
-        for p in summary.daily_points
-        if p.is_unusual
+        {"value": [p.date.isoformat(), round(p.total_kwh, 3)]} for p in points if p.is_unusual
     ]
+
+    temperature_series: list[dict[str, Any]] = []
+    if any(p.temperature_avg_c is not None for p in points):
+        temperature_series = [
+            _temperature_line(
+                t("chart.temperature_min"),
+                [_round(p.temperature_min_c) for p in points],
+                TEMPERATURE_RANGE_COLOR,
+                width=1,
+            ),
+            _temperature_line(
+                t("chart.temperature_max"),
+                [_round(p.temperature_max_c) for p in points],
+                TEMPERATURE_RANGE_COLOR,
+                width=1,
+            ),
+            _temperature_line(
+                t("chart.temperature_avg"),
+                [_round(p.temperature_avg_c) for p in points],
+                TEMPERATURE_AVG_COLOR,
+            ),
+        ]
+        for series in temperature_series:
+            series["yAxisIndex"] = 1
+    y_axes: list[dict[str, Any]] = [_kwh_axis()]
+    if temperature_series:
+        y_axes.append(_temperature_axis())
 
     return {
         "tooltip": {"trigger": "axis"},
-        "legend": {"data": [t("consumption.peak_hours"), t("consumption.off_peak_hours")]},
-        "grid": {"containLabel": True, "left": 8, "right": 16, "top": 32, "bottom": 24},
+        "legend": {
+            "type": "scroll",
+            "bottom": 0,
+            "data": [
+                t("consumption.peak_hours"),
+                t("consumption.off_peak_hours"),
+                *(s["name"] for s in temperature_series),
+            ],
+        },
+        "grid": {"containLabel": True, "left": 8, "right": 16, "top": 16, "bottom": 40},
         "xAxis": {"type": "category", "data": dates},
-        "yAxis": {"type": "value", "name": "kWh"},
+        "yAxis": y_axes,
         "series": [
             {
                 "name": t("consumption.peak_hours"),
@@ -64,6 +136,7 @@ def daily_chart_option(summary: MonthSummary, t: Callable[..., str]) -> dict[str
                 "symbolSize": 10,
                 "itemStyle": {"color": UNUSUAL_COLOR},
             },
+            *temperature_series,
         ],
     }
 
@@ -132,14 +205,40 @@ def monthly_summary_option(
     peak = [round(m.peak_hours_kwh, 1) for m in summary.months_current]
     off_peak = [round(m.off_peak_hours_kwh, 1) for m in summary.months_current]
 
+    temperature_series: list[dict[str, Any]] = []
+    if any(
+        m.temperature_avg_c is not None for m in summary.months_current + summary.months_previous
+    ):
+        temperature_series = [
+            _temperature_line(
+                t("chart.temperature_avg_previous_year"),
+                [_round(m.temperature_avg_c) for m in summary.months_previous],
+                PREVIOUS_YEAR_TEMPERATURE_COLOR,
+                type="dashed",
+            ),
+            _temperature_line(
+                t("chart.temperature_avg_current_year"),
+                [_round(m.temperature_avg_c) for m in summary.months_current],
+                TEMPERATURE_AVG_COLOR,
+            ),
+        ]
+        for series in temperature_series:
+            series["xAxisIndex"] = 0
+            series["yAxisIndex"] = 2
+    y_axes: list[dict[str, Any]] = [_kwh_axis(gridIndex=0), _kwh_axis(gridIndex=1)]
+    if temperature_series:
+        y_axes.append(_temperature_axis(gridIndex=0))
+
     return {
         "tooltip": {"trigger": "axis"},
         "legend": [
             {
+                "type": "scroll",
                 "data": [
                     t("consumption.previous_year"),
                     t("consumption.current_year"),
                     t("chart.forecast"),
+                    *(s["name"] for s in temperature_series),
                 ],
                 "top": 0,
             },
@@ -156,10 +255,7 @@ def monthly_summary_option(
             {"type": "category", "data": labels, "gridIndex": 0},
             {"type": "category", "data": labels, "gridIndex": 1},
         ],
-        "yAxis": [
-            {"type": "value", "name": "kWh", "gridIndex": 0},
-            {"type": "value", "name": "kWh", "gridIndex": 1},
-        ],
+        "yAxis": y_axes,
         "series": [
             {
                 "name": t("consumption.previous_year"),
@@ -205,6 +301,7 @@ def monthly_summary_option(
                 "yAxisIndex": 1,
                 "itemStyle": {"color": OFF_PEAK_COLOR},
             },
+            *temperature_series,
         ],
     }
 

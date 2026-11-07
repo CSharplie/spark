@@ -25,7 +25,7 @@ table below lists the underlying chart type, not a fixed-language label.
 | Data | Component | Chart type (ECharts) |
 |---|---|---|
 | KPI cards (total, vs N-1, HP, HC, daily avg, max day, CO2) | `#kpis` partial | plain HTML cards (no chart) |
-| Daily consumption (peak/off-peak split) with "unusual day" markers | `#daily-chart` | stacked bar + scatter overlay for markers |
+| Daily consumption (peak/off-peak split) with "unusual day" markers, plus daily min/max/avg outdoor temperature | `#daily-chart` | stacked bar + scatter overlay for markers + temperature on a right-hand °C axis (avg: bold line; min/max: thin pale lines forming an envelope) |
 | Peak/off-peak repartition | `#split-pie` | pie/donut |
 | Month N vs N-1 | `#month-comparison` | grouped bar (2 bars) |
 | Synthèse du mois (stats table: median, std dev, min/max, 30d avg, unusual days count) | `#monthly-summary-table` | plain HTML table |
@@ -33,11 +33,17 @@ table below lists the underlying chart type, not a fixed-language label.
 An unusual day is flagged when its total deviates from the trailing 30-day
 average beyond the configured threshold.
 
+Temperatures come from `daily_temperature` (see
+[02-data-model.md](./02-data-model.md)). The monthly value is the mean of
+that month's daily averages over the days that have one. Days/months
+without data show as gaps in the line; if the period has no temperature
+at all, the temperature series and °C axis are omitted.
+
 ## Annual view (`/dashboard/annual`)
 
 | Data | Component | Chart type (ECharts) |
 |---|---|---|
-| Monthly totals, 12 months, N vs N-1 | `#monthly-summary` (top) | grouped bar |
+| Monthly totals, 12 months, N vs N-1, plus monthly average temperature N vs N-1 | `#monthly-summary` (top) | grouped bar + 2 temperature lines (N solid, N-1 dashed) on a right-hand °C axis |
 | Peak/off-peak split per month | `#monthly-summary` (bottom) | stacked bar |
 | Cumulative kWh since January, N vs N-1 + forecast | `#cumulative` | line chart, dashed segment for the forecast portion |
 | Repartition by season (real vs forecast) | `#season-split` | bar, split real/forecast per bar |
