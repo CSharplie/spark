@@ -1,0 +1,72 @@
+{% set signature = analysis.signature %}
+<div class="overflow-x-auto rounded border border-slate-200 bg-white p-4">
+  <h2 class="mb-2 text-sm font-semibold text-slate-600">{{ t("dashboard.weather.title") }}</h2>
+  {% if not signature %}
+  <p class="text-sm text-slate-500">
+    {{ t("dashboard.weather.not_enough_data") }}
+    <a href="/settings" class="underline">{{ t("nav.settings") }}</a>
+  </p>
+  {% else %}
+  <table class="w-full border-collapse text-sm">
+    <tbody>
+      <tr class="border-b border-slate-100">
+        <td class="py-1 pr-4 text-slate-500">{{ t("dashboard.weather.heating") }}</td>
+        <td class="py-1 text-right font-medium">
+          {% if signature.heating_kwh_per_dd %}≈ {{ "%.0f"|format(analysis.heating_kwh) }} kWh ({{
+          "%.0f"|format(analysis.heating_share_pct or 0) }}%){% else %}{{
+          t("dashboard.weather.not_detected") }}{% endif %}
+        </td>
+      </tr>
+      <tr class="border-b border-slate-100">
+        <td class="py-1 pr-4 text-slate-500">{{ t("dashboard.weather.cooling") }}</td>
+        <td class="py-1 text-right font-medium">
+          {% if signature.cooling_kwh_per_dd %}≈ {{ "%.0f"|format(analysis.cooling_kwh) }} kWh ({{
+          "%.0f"|format(analysis.cooling_share_pct or 0) }}%){% else %}{{
+          t("dashboard.weather.not_detected") }}{% endif %}
+        </td>
+      </tr>
+      <tr class="border-b border-slate-100">
+        <td class="py-1 pr-4 text-slate-500">{{ t("dashboard.weather.base_load") }}</td>
+        <td class="py-1 text-right font-medium">
+          {{ t("dashboard.weather.kwh_per_day", value="%.1f"|format(signature.base_kwh)) }}
+        </td>
+      </tr>
+      <tr class="border-b border-slate-100">
+        <td class="py-1 pr-4 text-slate-500">{{ t("dashboard.weather.heating_sensitivity") }}</td>
+        <td class="py-1 text-right font-medium">
+          {% if signature.heating_kwh_per_dd %}{{ t("dashboard.weather.kwh_per_degree_day",
+          value="%.2f"|format(signature.heating_kwh_per_dd)) }}
+          <span class="text-xs text-slate-400">{{ t("dashboard.weather.below",
+            temp=signature.heating_balance_c) }}</span>{% else %}—{% endif %}
+        </td>
+      </tr>
+      <tr class="border-b border-slate-100">
+        <td class="py-1 pr-4 text-slate-500">{{ t("dashboard.weather.cooling_sensitivity") }}</td>
+        <td class="py-1 text-right font-medium">
+          {% if signature.cooling_kwh_per_dd %}{{ t("dashboard.weather.kwh_per_degree_day",
+          value="%.2f"|format(signature.cooling_kwh_per_dd)) }}
+          <span class="text-xs text-slate-400">{{ t("dashboard.weather.above",
+            temp=signature.cooling_balance_c) }}</span>{% else %}—{% endif %}
+        </td>
+      </tr>
+      <tr class="border-b border-slate-100">
+        <td class="py-1 pr-4 text-slate-500">{{ t("dashboard.weather.adjusted_change") }}</td>
+        {% set change = analysis.weather_adjusted_change_pct %}
+        <td
+          class="py-1 text-right font-medium {% if change is not none %}{% if change > 0 %}text-red-600{% else %}text-green-600{% endif %}{% endif %}"
+        >
+          {% if change is not none %}{{ "%+.1f"|format(change) }}%{% else %}—{% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td class="py-1 pr-4 text-slate-500">{{ t("dashboard.weather.fit_quality") }}</td>
+        <td class="py-1 text-right font-medium">{{ "%.2f"|format(signature.r2) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="py-2 text-xs text-slate-400">
+    {{ t("dashboard.weather.window", days=signature.n_days, excluded=analysis.window|length -
+    signature.n_days, start=analysis.window[0].date, end=analysis.window[-1].date) }}
+  </p>
+  {% endif %}
+</div>

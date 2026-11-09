@@ -4,13 +4,16 @@ See docs/06-dashboard-views.md. Kept separate from aggregation.py: aggregation
 produces plain data, this module formats it for a specific chart/locale.
 """
 
+import math
 from collections.abc import Callable
 from datetime import date as date_
 from typing import Any
 
+import numpy as np
 from babel.dates import format_date
 
 from app.services.aggregation import AnnualSummary, MonthSummary
+from app.services.energy_signature import DayPoint, PeriodAnalysis
 from app.services.forecast import ForecastResult
 
 PEAK_COLOR = "#ea580c"  # orange-600
@@ -19,7 +22,6 @@ UNUSUAL_COLOR = "#dc2626"  # red-600
 PREVIOUS_YEAR_COLOR = "#94a3b8"  # slate-400
 CURRENT_YEAR_COLOR = "#2563eb"  # blue-600
 TEMPERATURE_AVG_COLOR = "#0f766e"  # teal-700
-TEMPERATURE_RANGE_COLOR = "#5eead4"  # teal-300
 PREVIOUS_YEAR_TEMPERATURE_COLOR = "#5eead4"  # teal-300
 
 SEASON_ORDER = ("winter", "spring", "summer", "autumn")
@@ -50,7 +52,7 @@ def _temperature_axis(**extra: Any) -> dict[str, Any]:
 
 
 def _temperature_line(
-    name: str, data: list[float | None], color: str, width: float = 2, **line_style: Any
+    name: str, data: list[float | None], color: str, **line_style: Any
 ) -> dict[str, Any]:
     return {
         "name": name,
@@ -60,7 +62,7 @@ def _temperature_line(
         "showSymbol": False,
         "z": 3,
         "itemStyle": {"color": color},
-        "lineStyle": {"color": color, "width": width, **line_style},
+        "lineStyle": {"color": color, "width": 2, **line_style},
     }
 
 
@@ -76,26 +78,15 @@ def daily_chart_option(summary: MonthSummary, t: Callable[..., str]) -> dict[str
     temperature_series: list[dict[str, Any]] = []
     if any(p.temperature_avg_c is not None for p in points):
         temperature_series = [
-            _temperature_line(
-                t("chart.temperature_min"),
-                [_round(p.temperature_min_c) for p in points],
-                TEMPERATURE_RANGE_COLOR,
-                width=1,
-            ),
-            _temperature_line(
-                t("chart.temperature_max"),
-                [_round(p.temperature_max_c) for p in points],
-                TEMPERATURE_RANGE_COLOR,
-                width=1,
-            ),
-            _temperature_line(
-                t("chart.temperature_avg"),
-                [_round(p.temperature_avg_c) for p in points],
-                TEMPERATURE_AVG_COLOR,
-            ),
+            {
+                **_temperature_line(
+                    t("chart.temperature_avg"),
+                    [_round(p.temperature_avg_c) for p in points],
+                    TEMPERATURE_AVG_COLOR,
+                ),
+                "yAxisIndex": 1,
+            }
         ]
-        for series in temperature_series:
-            series["yAxisIndex"] = 1
     y_axes: list[dict[str, Any]] = [_kwh_axis()]
     if temperature_series:
         y_axes.append(_temperature_axis())
@@ -407,6 +398,69 @@ def season_split_option(
                 "stack": "season",
                 "data": forecasted,
                 "itemStyle": {"color": CURRENT_YEAR_COLOR, "opacity": 0.4},
+            },
+        ],
+    }
+
+
+def energy_signature_option(analysis: PeriodAnalysis, t: Callable[..., str]) -> dict[str, Any]:
+    """kWh/day vs average temperature: model window days, selected period days, fitted curve."""
+    signature = analysis.signature
+    if signature is None:
+        return {
+            "title": {
+                "text": t("dashboard.weather.not_enough_data"),
+                "left": "center",
+                "top": "middle",
+                "textStyle": {"fontSize": 13, "fontWeight": "normal", "color": "#94a3b8"},
+            }
+        }
+
+    period_days = {d.date for d in analysis.period}
+
+    def point(d: DayPoint) -> list[Any]:
+        return [round(d.temperature_avg_c, 1), round(d.total_kwh, 1), d.date.isoformat()]
+
+    temps = [d.temperature_avg_c for d in analysis.window]
+    curve_x = np.arange(math.floor(min(temps)), math.ceil(max(temps)) + 0.5, 0.5)
+    curve = [
+        [float(x), round(float(y), 1)]
+        for x, y in zip(curve_x, signature.predict(curve_x), strict=True)
+    ]
+
+    return {
+        "tooltip": {"trigger": "item"},
+        "legend": {
+            "type": "scroll",
+            "bottom": 0,
+            "data": [t("chart.signature_window"), t("chart.signature_period"), t("chart.model")],
+        },
+        "grid": {"containLabel": True, "left": 8, "right": 16, "top": 16, "bottom": 40},
+        "xAxis": {"type": "value", "scale": True, "axisLabel": {"formatter": "{value} °C"}},
+        "yAxis": _kwh_axis(),
+        "series": [
+            {
+                "name": t("chart.signature_window"),
+                "type": "scatter",
+                "data": [point(d) for d in analysis.window if d.date not in period_days],
+                "symbolSize": 5,
+                "itemStyle": {"color": PREVIOUS_YEAR_COLOR, "opacity": 0.5},
+            },
+            {
+                "name": t("chart.signature_period"),
+                "type": "scatter",
+                "data": [point(d) for d in analysis.period],
+                "symbolSize": 7,
+                "itemStyle": {"color": CURRENT_YEAR_COLOR},
+            },
+            {
+                "name": t("chart.model"),
+                "type": "line",
+                "data": curve,
+                "showSymbol": False,
+                "z": 3,
+                "itemStyle": {"color": TEMPERATURE_AVG_COLOR},
+                "lineStyle": {"color": TEMPERATURE_AVG_COLOR, "width": 2},
             },
         ],
     }

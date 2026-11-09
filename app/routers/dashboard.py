@@ -3,6 +3,7 @@
 See docs/05-api-routes.md and docs/06-dashboard-views.md.
 """
 
+from calendar import monthrange
 from datetime import date
 
 from babel.dates import format_date
@@ -17,9 +18,16 @@ from app.db.models import ConsumptionRecord, User
 from app.db.session import get_session
 from app.services import chart_options
 from app.services.aggregation import get_annual_summary, get_month_summary
+from app.services.energy_signature import analyze_period
 from app.services.forecast import compute_forecast
 
 router = APIRouter()
+
+
+def _period(year: int, month: int | None) -> tuple[date, date]:
+    if month is None:
+        return date(year, 1, 1), date(year, 12, 31)
+    return date(year, month, 1), date(year, month, monthrange(year, month)[1])
 
 
 def _available_years(session: Session, user_id: int) -> list[int]:
@@ -234,6 +242,33 @@ def season_split_partial(
     forecast = compute_forecast(session, current_user.id, year)
     t = get_request_translator(request)
     option = chart_options.season_split_option(summary, forecast, t)
+    return render(request, "partials/dashboard/echart.html", {"option": option})
+
+
+@router.get("/partials/dashboard/weather-summary")
+def weather_summary_partial(
+    request: Request,
+    year: int = Query(...),
+    month: int | None = Query(None, ge=1, le=12),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    assert current_user.id is not None
+    analysis = analyze_period(session, current_user.id, *_period(year, month))
+    return render(request, "partials/dashboard/weather_summary.html", {"analysis": analysis})
+
+
+@router.get("/partials/dashboard/energy-signature")
+def energy_signature_partial(
+    request: Request,
+    year: int = Query(...),
+    month: int | None = Query(None, ge=1, le=12),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> Response:
+    assert current_user.id is not None
+    analysis = analyze_period(session, current_user.id, *_period(year, month))
+    option = chart_options.energy_signature_option(analysis, get_request_translator(request))
     return render(request, "partials/dashboard/echart.html", {"option": option})
 
 

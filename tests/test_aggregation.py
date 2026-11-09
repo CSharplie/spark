@@ -190,11 +190,7 @@ def test_month_summary_attaches_daily_temperatures(session: Session, flat_datase
     summary = get_month_summary(session, user.id, year=2026, month=3)
 
     first, second = summary.daily_points[0], summary.daily_points[1]
-    assert (first.temperature_min_c, first.temperature_max_c, first.temperature_avg_c) == (
-        1.0,
-        9.0,
-        5.0,
-    )
+    assert first.temperature_avg_c == 5.0
     assert second.temperature_avg_c is None
 
 
@@ -232,7 +228,8 @@ def test_charts_include_temperature_series_only_when_available(
 
     daily = daily_chart_option(month, t)
     daily_names = {s["name"] for s in daily["series"]}
-    assert {"Min °C", "Max °C", "Avg °C"} <= daily_names
+    assert "Avg °C" in daily_names
+    assert not {"Min °C", "Max °C"} & daily_names
     assert daily["yAxis"][1]["axisLabel"]["formatter"] == "{value} °C"
 
     monthly = monthly_summary_option(annual, forecast, t, "en")
