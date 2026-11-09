@@ -53,6 +53,66 @@ async def test_login_wrong_password_rejected(client: AsyncClient, test_user: Use
     assert "session" not in response.cookies
 
 
+async def test_login_is_blocked_for_five_minutes_after_three_failures(
+    client: AsyncClient, test_user: User
+) -> None:
+    for _ in range(3):
+        login_page = await client.get("/login")
+        csrf_token = _extract_csrf(login_page.text)
+        response = await client.post(
+            "/login",
+            data={"username": "alice", "password": "wrong-password", "csrf_token": csrf_token},
+        )
+        assert response.status_code == 401
+
+    login_page = await client.get("/login")
+    csrf_token = _extract_csrf(login_page.text)
+    response = await client.post(
+        "/login",
+        data={"username": "alice", "password": "correct-horse-battery", "csrf_token": csrf_token},
+    )
+
+    assert response.status_code == 429
+    assert 1 <= int(response.headers["retry-after"]) <= 300
+
+
+async def test_successful_login_clears_failed_attempts(
+    client: AsyncClient, test_user: User
+) -> None:
+    for _ in range(2):
+        login_page = await client.get("/login")
+        csrf_token = _extract_csrf(login_page.text)
+        await client.post(
+            "/login",
+            data={"username": "alice", "password": "wrong-password", "csrf_token": csrf_token},
+        )
+
+    login_page = await client.get("/login")
+    csrf_token = _extract_csrf(login_page.text)
+    success = await client.post(
+        "/login",
+        data={"username": "alice", "password": "correct-horse-battery", "csrf_token": csrf_token},
+    )
+    assert success.status_code == 303
+
+    for _ in range(2):
+        login_page = await client.get("/login")
+        csrf_token = _extract_csrf(login_page.text)
+        failure = await client.post(
+            "/login",
+            data={"username": "alice", "password": "wrong-password", "csrf_token": csrf_token},
+        )
+        assert failure.status_code == 401
+
+    login_page = await client.get("/login")
+    csrf_token = _extract_csrf(login_page.text)
+    response = await client.post(
+        "/login",
+        data={"username": "alice", "password": "correct-horse-battery", "csrf_token": csrf_token},
+    )
+    assert response.status_code == 303
+
+
 async def test_login_bad_csrf_rejected(client: AsyncClient, test_user: User) -> None:
     await client.get("/login")
 
