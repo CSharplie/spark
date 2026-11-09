@@ -19,6 +19,16 @@ async def test_login_page_renders(client: AsyncClient) -> None:
     assert "csrf_token" in response.text
 
 
+async def test_favicon_is_linked_and_served(client: AsyncClient) -> None:
+    page = await client.get("/login")
+    assert 'rel="icon" type="image/svg+xml" href="/static/favicon.svg"' in page.text
+
+    favicon = await client.get("/static/favicon.svg")
+    assert favicon.status_code == 200
+    assert favicon.headers["content-type"] == "image/svg+xml"
+    assert b"#facc15" in favicon.content
+
+
 async def test_home_requires_auth(client: AsyncClient) -> None:
     response = await client.get("/", follow_redirects=False)
     assert response.status_code == 303
