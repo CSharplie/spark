@@ -19,6 +19,16 @@ async def test_login_page_renders(client: AsyncClient) -> None:
     assert "csrf_token" in response.text
 
 
+async def test_favicon_is_linked_and_served(client: AsyncClient) -> None:
+    page = await client.get("/login")
+    assert 'rel="icon" type="image/svg+xml" href="/static/favicon.svg"' in page.text
+
+    favicon = await client.get("/static/favicon.svg")
+    assert favicon.status_code == 200
+    assert favicon.headers["content-type"] == "image/svg+xml"
+    assert b"#facc15" in favicon.content
+
+
 async def test_home_requires_auth(client: AsyncClient) -> None:
     response = await client.get("/", follow_redirects=False)
     assert response.status_code == 303
@@ -51,6 +61,66 @@ async def test_login_wrong_password_rejected(client: AsyncClient, test_user: Use
 
     assert response.status_code == 401
     assert "session" not in response.cookies
+
+
+async def test_login_is_blocked_for_five_minutes_after_three_failures(
+    client: AsyncClient, test_user: User
+) -> None:
+    for _ in range(3):
+        login_page = await client.get("/login")
+        csrf_token = _extract_csrf(login_page.text)
+        response = await client.post(
+            "/login",
+            data={"username": "alice", "password": "wrong-password", "csrf_token": csrf_token},
+        )
+        assert response.status_code == 401
+
+    login_page = await client.get("/login")
+    csrf_token = _extract_csrf(login_page.text)
+    response = await client.post(
+        "/login",
+        data={"username": "alice", "password": "correct-horse-battery", "csrf_token": csrf_token},
+    )
+
+    assert response.status_code == 429
+    assert 1 <= int(response.headers["retry-after"]) <= 300
+
+
+async def test_successful_login_clears_failed_attempts(
+    client: AsyncClient, test_user: User
+) -> None:
+    for _ in range(2):
+        login_page = await client.get("/login")
+        csrf_token = _extract_csrf(login_page.text)
+        await client.post(
+            "/login",
+            data={"username": "alice", "password": "wrong-password", "csrf_token": csrf_token},
+        )
+
+    login_page = await client.get("/login")
+    csrf_token = _extract_csrf(login_page.text)
+    success = await client.post(
+        "/login",
+        data={"username": "alice", "password": "correct-horse-battery", "csrf_token": csrf_token},
+    )
+    assert success.status_code == 303
+
+    for _ in range(2):
+        login_page = await client.get("/login")
+        csrf_token = _extract_csrf(login_page.text)
+        failure = await client.post(
+            "/login",
+            data={"username": "alice", "password": "wrong-password", "csrf_token": csrf_token},
+        )
+        assert failure.status_code == 401
+
+    login_page = await client.get("/login")
+    csrf_token = _extract_csrf(login_page.text)
+    response = await client.post(
+        "/login",
+        data={"username": "alice", "password": "correct-horse-battery", "csrf_token": csrf_token},
+    )
+    assert response.status_code == 303
 
 
 async def test_login_bad_csrf_rejected(client: AsyncClient, test_user: User) -> None:

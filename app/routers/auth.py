@@ -8,7 +8,13 @@ from fastapi.responses import RedirectResponse, Response
 from sqlmodel import Session, select
 
 from app.core.deps import get_current_user
-from app.core.rate_limit import is_rate_limited, record_attempt
+from app.core.rate_limit import (
+    clear_failed_attempts,
+    failed_attempt_cooldown_remaining,
+    is_rate_limited,
+    record_attempt,
+    record_failed_attempt,
+)
 from app.core.security import (
     CSRF_COOKIE_NAME,
     SESSION_COOKIE_NAME,
@@ -46,16 +52,25 @@ def login_submit(
         raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
     record_attempt(client_ip)
 
+    cooldown_remaining = failed_attempt_cooldown_remaining(client_ip)
+    if cooldown_remaining:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many failed login attempts. Try again later.",
+            headers={"Retry-After": str(cooldown_remaining)},
+        )
+
     cookie_csrf = request.cookies.get(CSRF_COOKIE_NAME)
+    csrf_valid = verify_csrf(cookie_csrf, csrf_token)
     user = session.exec(select(User).where(User.username == username)).first()
 
     # Always run a real argon2 verify (even for an unknown user) so response time doesn't
     # leak whether the username exists.
     password_ok = verify_password_constant_time(password, user.password_hash if user else None)
-    valid = (
-        verify_csrf(cookie_csrf, csrf_token) and user is not None and user.is_active and password_ok
-    )
+    valid = csrf_valid and user is not None and user.is_active and password_ok
     if not valid:
+        if csrf_valid:
+            record_failed_attempt(client_ip)
         new_csrf_token = generate_csrf_token()
         response = render(
             request, "login.html", {"csrf_token": new_csrf_token, "error": True}, status_code=401
@@ -64,6 +79,7 @@ def login_submit(
         return response
 
     assert user is not None and user.id is not None
+    clear_failed_attempts(client_ip)
     response = RedirectResponse(url="/", status_code=303)
     issue_session_cookie(response, user.id)
     response.delete_cookie(CSRF_COOKIE_NAME)

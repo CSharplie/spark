@@ -33,8 +33,6 @@ class DailyPoint:
     off_peak_hours_kwh: float
     total_kwh: float
     is_unusual: bool
-    temperature_min_c: float | None = None
-    temperature_max_c: float | None = None
     temperature_avg_c: float | None = None
 
 
@@ -188,8 +186,6 @@ def get_month_summary(session: Session, user_id: int, year: int, month: int) -> 
                 off_peak_hours_kwh=row["off_peak_hours_kwh"],
                 total_kwh=row["total_kwh"],
                 is_unusual=_is_unusual(row["total_kwh"], trailing_avg.get(idx)),
-                temperature_min_c=temperature.temperature_min_c if temperature else None,
-                temperature_max_c=temperature.temperature_max_c if temperature else None,
                 temperature_avg_c=temperature.temperature_avg_c if temperature else None,
             )
         )

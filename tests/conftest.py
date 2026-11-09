@@ -15,6 +15,8 @@ from app.db.models import User
 @pytest.fixture(autouse=True)
 def _reset_login_rate_limit() -> None:
     rate_limit._attempts.clear()
+    rate_limit._failed_attempts.clear()
+    rate_limit._failure_cooldowns.clear()
 
 
 @pytest.fixture
